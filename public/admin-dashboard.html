@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .admin-dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .signup-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .signup-table th, .signup-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .signup-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .signup-table tr:nth-child(even) {
+            background-color: #f8f8f8;
+        }
+        .download-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .download-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="admin-root"></div>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <script type="text/babel">
+        const AdminDashboard = () => {
+            const [signups, setSignups] = React.useState([]);
+            const [error, setError] = React.useState(null);
+
+            React.useEffect(() => {
+                fetchSignups();
+            }, []);
+
+            const fetchSignups = () => {
+                const token = localStorage.getItem('adminToken');
+                fetch('/api/admin/signups', {
+                    headers: {
+                        'auth-token': token
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch signups');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    setSignups(data);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    setError('Failed to fetch signups');
+                });
+            };
+
+            const downloadExcel = () => {
+                const worksheet = XLSX.utils.json_to_sheet(signups);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Signups");
+                XLSX.writeFile(workbook, "signups.xlsx");
+            };
+
+            return (
+                <div className="admin-dashboard">
+                    <h1>Admin Dashboard</h1>
+                    {error && <p className="error-message">{error}</p>}
+                    <h2>Sign-ups</h2>
+                    <table className="signup-table">
+                        <thead>
+                            <tr>
+                                <th>Company Name</th>
+                                <th>Company Address</th>
+                                <th>Number of Branches</th>
+                                <th>Contact Person</th>
+                                <th>Contact Email</th>
+                                <th>Contact Number</th>
+                                <th>Submitted</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {signups.map((signup, index) => (
+                                <tr key={index}>
+                                    <td>{signup.companyName}</td>
+                                    <td>{signup.companyAddress}</td>
+                                    <td>{signup.branchCount}</td>
+                                    <td>{signup.contactPerson}</td>
+                                    <td>{signup.contactEmail}</td>
+                                    <td>{signup.contactNumber}</td>
+                                    <td>{new Date(signup.timestamp).toLocaleString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <button onClick={downloadExcel} className="download-btn">Download as Excel</button>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<AdminDashboard />, document.getElementById('admin-root'));
+    </script>
+</body>
+</html>
